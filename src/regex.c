@@ -39,13 +39,12 @@ regex_t * regexInit ( char * str ) {
     return t;
 }
 
-int match ( regex_t * regex, regex_t * str, char * expre , size_t kcount ) {
+int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount ) {
 
     char * expressions [10] = { NULL };
     if ( expre != NULL ) {
-        for ( size_t i = 0; i < kcount; ++i ) {
-            expressions [i] = (expre + i * 8);
-        }
+
+        for ( size_t i = 0; i < kcount; ++i ) expressions [i] = expre [i];
     }
 
     szRange a;
@@ -95,7 +94,7 @@ int match ( regex_t * regex, regex_t * str, char * expre , size_t kcount ) {
                 break;
             }
             if ( count <= 9 ) {
-                size_t e = end - save - 1;
+                size_t e = str->pos - save;
                 expressions [count] = malloc ( sizeof ( char ) * (e + 1) );
                 strncpy ( expressions [count], &str->begin [save], e );
                 expressions [count] [e] = 0;
@@ -118,10 +117,12 @@ int match ( regex_t * regex, regex_t * str, char * expre , size_t kcount ) {
                 a.max--;
                 regex->pos = rsave;
 
-                size_t i = 1;                
-                for ( ; match ( regex, str, NULL, 0 ) == SUCCES && i < a.max; regex->pos = rsave, ++i ) continue;
+                size_t i = 1;
+                size_t v = 0, n = 0;
+                for ( n = str->pos;( v = match ( regex, str, NULL, 0 ) )== SUCCES && i < a.max; regex->pos = rsave, ++i, n = str->pos ) continue;
                 
-                regex->pos = end + 1;
+                if ( v != SUCCES ) str->pos = n;
+                regex->pos = end;
                 if ( i < a.min ) return FAIL;
 
                 break;
@@ -150,7 +151,7 @@ int match ( regex_t * regex, regex_t * str, char * expre , size_t kcount ) {
 
                     regex->pos++;
                     regex_t * p = regexInit ( expressions [n] );
-                    if ( (n = match ( p, str, expressions [0], count )) == SUCCES ) {
+                    if ( (n = match ( p, str, expressions, count )) == SUCCES ) {
                         regexFree ( p );
                         break;
                     }
@@ -323,7 +324,7 @@ int match ( regex_t * regex, regex_t * str, char * expre , size_t kcount ) {
             break;
 
     }
-    return match ( regex, str, expressions [0], count );
+    return match ( regex, str, expressions, count );
 }
 
 void regexFree ( regex_t * regex ) {
