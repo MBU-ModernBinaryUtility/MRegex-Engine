@@ -48,15 +48,21 @@ int match ( regex_t * regex, regex_t * str, char * expre , size_t kcount ) {
         }
     }
 
+    szRange a;
     size_t count = kcount;
     bool negate = false;
     int _c = 0;
+    size_t min = 1;
+    bool srange = false;
 
     switch ( regex->begin [ regex->pos ] ) {
 
         case 0:
             if ( str->begin [str->pos] == 0 ) return SUCCES;
             else return FAIL;
+        case '}':
+            regex->pos++;
+            return SUCCES;
         case ')':
             regex->pos++;
             return SUCCES;
@@ -70,9 +76,12 @@ int match ( regex_t * regex, regex_t * str, char * expre , size_t kcount ) {
 
             int c = match ( regex, str , NULL, 0 );
             end = regex->pos - 1;
-            
+
+
+
             if ( c == ERROR ) return ERROR;
             if ( c == FAIL ) {
+
                 if ( !seakToEnd ( regex )) return ERROR;
                 str->pos = save;
                 if ( regex->begin [regex->pos] == '?' || regex->begin [regex->pos] == '*' ) {
@@ -83,33 +92,41 @@ int match ( regex_t * regex, regex_t * str, char * expre , size_t kcount ) {
                     return FAIL;
                 }
                 regex->pos++;
-            } else if ( regex->begin [regex->pos] == '+' || regex->begin [regex->pos] == '*') {
-
-                if ( count <= 9 ) {
-                    size_t e = str->pos - save - 1; // problem in this
-                    expressions [count] = malloc ( sizeof ( char ) * (e + 1) );
-                    strncpy ( expressions [count], &str->begin [save], e );
-                    expressions [count] [e] = 0;
-                }
-                
+                break;
+            }
+            if ( count <= 9 ) {
+                size_t e = end - save - 1;
+                expressions [count] = malloc ( sizeof ( char ) * (e + 1) );
+                strncpy ( expressions [count], &str->begin [save], e );
+                expressions [count] [e] = 0;
+                count++;
+            }
+            if ( regex->begin [regex->pos] == '+' || regex->begin [regex->pos] == '*') {
+    
                 regex->pos = rsave;
                 
                 for ( ; match ( regex, str, NULL, 0 ) == SUCCES; regex->pos = rsave ) continue;
                 
                 regex->pos = end + 2;
-            } else {
-
+                break;
+            } else if ( regex->begin [regex->pos] == '{' ) {
                 
-                if ( count <= 9 ) {
-                    size_t e = end - save - 1;
-                    expressions [count] = malloc ( sizeof ( char ) * (e + 1) );
-                    strncpy ( expressions [count], &str->begin [save], e );
-                    expressions [count] [e] = 0;
-                }
-                if ( regex->begin [regex->pos] == '?' ) regex->pos++;
-            }
+                a = getszRange ( regex );
+                end = regex->pos;
+                if ( a.state == ERROR ) return ERROR;
 
-            count++;
+                a.max--;
+                regex->pos = rsave;
+
+                size_t i = 1;                
+                for ( ; match ( regex, str, NULL, 0 ) == SUCCES && i < a.max; regex->pos = rsave, ++i ) continue;
+                
+                regex->pos = end + 1;
+                if ( i < a.min ) return FAIL;
+
+                break;
+            } else if ( regex->begin [regex->pos] == '?' ) regex->pos++;
+
             break;
         case '|':
             return 0;
@@ -166,25 +183,49 @@ int match ( regex_t * regex, regex_t * str, char * expre , size_t kcount ) {
                 negate = true;
             }
             range_t * range = getrange ( regex );
-
             bool inR = isInrange ( range, str->begin [str->pos] );
+
+            if ( regex->begin [regex->pos + 1] == '{' ) {
+
+                regex->pos++;
+                a = getszRange ( regex );
+                
+                if ( a.state == ERROR ) return ERROR;
+
+                min = a.min;
+                srange = true;
+            }
+
+
 
             if ( inR && !negate ) {
 
-                if ( regex->begin [regex->pos + 1] == '?' || regex->begin [regex->pos + 1] == '*' || regex->begin [regex->pos + 1] == '+' ) {
-                    regex->pos++;
-                }
-                if ( regex->begin [regex->pos] == '*' || regex->begin [regex->pos] == '+' ) {
+                if ( srange ) {
+
+                    size_t i = 0;
+                    for ( ; isInrange ( range, str->begin [str->pos] ) && i < a.max; str->pos++, ++i ) continue;
+                    if ( i < a.min ) return FAIL;
+                
+                } else if ( regex->begin [regex->pos + 1] == '?' )  regex->pos += 2;
+                else if ( regex->begin [regex->pos + 1 ] == '*' || regex->begin [regex->pos + 1] == '+' ) {
 
                     for ( ; isInrange ( range, str->begin [str->pos] ); str->pos++ ) continue;
+                    regex->pos += 2;
+
                 } else {
                     str->pos++;
                 }
-                regex->pos++;
-                //freeRange ( range );
+
                 break;
             } else if ( negate && !inR ) {
                 
+                if ( srange ) {
+
+                    size_t i = 0;
+                    for ( ; !isInrange ( range, str->begin [str->pos] ) && i < a.max; str->pos++, ++i ) continue;
+                    if ( i < a.min ) return FAIL;
+                }
+
                 if ( regex->begin [regex->pos + 1] == '?' || regex->begin [regex->pos + 1] == '*' || regex->begin [regex->pos + 1] == '+' ) {
                     regex->pos++;
                 }
@@ -199,7 +240,7 @@ int match ( regex_t * regex, regex_t * str, char * expre , size_t kcount ) {
                 regex->pos++;
                 //freeRange ( range );
                 break;
-            } else if ( regex->begin [regex->pos + 1] == '*' || regex->begin [regex->pos + 1] == '?' ) {
+            } else if ( regex->begin [regex->pos + 1] == '*' || regex->begin [regex->pos + 1] == '?' || min == 0 ) {
                 regex->pos += 2;
                 //freeRange ( range );
                 break;
@@ -248,10 +289,27 @@ int match ( regex_t * regex, regex_t * str, char * expre , size_t kcount ) {
             break;
         default :
 
-            if ( regex->begin [regex->pos] == str->begin [str->pos] ) {
+            char d;
+            if ( regex->begin [regex->pos + 1] == '{' ) {
+
+                d = regex->begin [regex->pos];
+                regex->pos++;
+                a = getszRange ( regex );
+                
+                if ( a.state == ERROR ) return ERROR;
+
+                size_t i = 0;
+                for ( ; d == str->begin [str->pos] && i < a.max; str->pos++, ++i ) continue;
+                if ( i < a.min ) return FAIL;
+
+                break;
+
+            } else if ( regex->begin [regex->pos] == str->begin [str->pos] ) {
+
                 if ( regex->begin [regex->pos + 1] == '?' ) {
                     regex->pos++;
                 }
+
                 regex->pos++;
                 str->pos++;
                 break;
