@@ -42,7 +42,7 @@ typedef struct _regex_t {
 
 regex_t * regexInit ( char * str );
 
-int match ( regex_t * regex, regex_t * str, char *, size_t );
+int match ( regex_t * regex, regex_t * str, char **, size_t );
 
 void regexFree ( regex_t * );
 
