@@ -27,11 +27,32 @@ SOFTWARE.
 #include <string.h>
 #include <stdio.h>
 
+#define isrange( i, b, c ) (i >= b && i <= c)   
+
+// Used because the original one had problemes
 bool misblank ( int c ) {
 
     if ( c == ' ' || c == '\r' || c == '\n' || c == '\t' ) return true;
     return false;
 }
+
+// clear the string from the unnecessary white spaces
+char * clearifiy ( char * str ) {
+
+    size_t i = 0, d = 0;
+    while ( str [d] != 0 ) {
+
+        while ( misblank ( str [d] ) ) {
+            d++;
+        }
+        str [i] = str [d];
+        ++i;
+        ++d;
+    }
+    str [i] = 0;
+    return str;
+}
+
 // freerange necessary
 /* I don't know what hapening here but every time i get segfault on every platform */
 void freeRange ( range_t * r ) {
@@ -163,28 +184,55 @@ bool seakToEnd ( regex_t * regex ) {
     return false;
 }
 
-szRange getszRange ( regex_t * regex ) {
-    szRange r;
-    size_t be = regex->pos;
+// find the end of curly brace that's not escaped
+// the function is recursive
+bool findEnd ( regex_t * regex ) {
+
     do {
-        if ( regex->begin [regex->pos] == 0 ) {
-            r.state = ERROR;
-            return r;
+        regex->pos++;
+        if ( regex->begin [regex->pos] == '}' && regex->begin [regex->pos - 1] != '\\' ) return true;
+        if ( regex->begin [regex->pos] == '{' && regex->begin [regex->pos - 1] != '\\' ) {
+            if ( !findEnd ( regex ) ) return false;
         }
- 
-        regex->pos++; 
- 
-    } while ( regex->begin [regex->pos] != '}' );
+
+    } while ( regex->begin [regex->pos] != 0 );
+
+    return false;
+}
+
+szRange getszRange ( regex_t * regex ) {
     
+    szRange r;
+    // get the size if the str
+    size_t be = regex->pos;
+    if ( !findEnd ( regex ) ) {
+        r.state = ERROR;
+        return r;
+    }
+    size_t end = regex->pos, sz = end - be + 1;
 
-    size_t len = regex->pos - be;
-    char * str = malloc ( len + 1 );
+    // create our str and clear it
+    char * buff = malloc ( sz );
+    strncpy ( buff, &regex->begin [be], (sz - 1) );
+    buff [sz - 1] = 0;
 
-    strncpy ( str, &regex->begin [be], len );
-    str [len] = 0;
-    if ( sscanf ( str, "{ %lu, %lu }", &r.min, &r.max ) <= 0 ) r.state = ERROR;
-    else r.state = SUCCES;
-    free ( str );
+    clearifiy ( buff );
 
+    // get the necessary data
+    if ( !sscanf ( buff, "{%ld,%ld}", &r.min, &r.max ) ) {
+        // case failure
+        r.state = ERROR;
+        return r;
+    }
+
+    regex->pos++;
+
+    // final check
+    if ( r.min > r.max ) {
+
+        size_t c = r.max;
+        r.max = r.min;
+        r.min = c;
+    }
     return r;
 }
