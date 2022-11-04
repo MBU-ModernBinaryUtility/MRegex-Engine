@@ -19,6 +19,5 @@ MBU Regex engine is an under-development regular expression engine and supports 
 		 *:  Match the previous element zero or more times
 		 +: Match the previous element one or more times
 		 ?: Match the previous element zero or one time
-		 {min,max}: Match the previous element min times or more but no more than max
 
 Currently, there are more things under-development
