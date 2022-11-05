@@ -20,5 +20,24 @@ MBU Regex engine is an under-development regular expression engine and supports 
 		 +: Match the previous element one or more times
 		 ?: Match the previous element zero or one time
 		 {min,max}: Match the previous element min times or more but no more than max
+	IMPORTANT:
+		Whenever you use '.+' or '.*' make sure that the next character is a valid character or escaped character like '\(' or 'v' but MAKE SURE IT'S NOT '('
+	
+	Modes:
+		NoCase: use it whit case insensitive
+		NoWhit: ignore all the white spaces
+		MultiLine: Use multiline mode, where ^ and $ match the beginning and end of each line (instead of the beginning and end of the input string)
+	
+Examples:
+
+
+	#include <Mregex.h>
+	int main (void) {
+		
+		// will return SUCCES (0)
+		int c = Regex ( "[h-v]+", "HvKk lMn", NULL, 0, NoCase | NoWhite );
+		
+	}
+	
 
 Currently, there are more things under-development
