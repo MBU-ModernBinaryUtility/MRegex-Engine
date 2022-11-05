@@ -31,14 +31,15 @@ MBU Regex engine is an under-development regular expression engine and supports 
 Examples:
 
 
-	#include <Mregex.h>
-	int main (void) {
+```
+#include <Mregex.h>
+int main (void) {
 		
-		char a [] = "[h-v]+", b [] = "H vkk lmn"; 
-		// will return SUCCES (0)
-		int c = Regex ( a, b, NULL, 0, NoCase | NoWhite );
+char a [] = "[h-v]+", b [] = "H vkk lmn"; 
+// will return SUCCES (0)
+int c = Regex ( a, b, NULL, 0, NoCase | NoWhite );
 		
-	}
-	
+}
+```
 
 Currently, there are more things under-development
