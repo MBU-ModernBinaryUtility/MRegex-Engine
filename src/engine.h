@@ -26,7 +26,7 @@ SOFTWARE.
 #define __ENGINE__
 
 #include <stdbool.h>
-#include "regex.h"
+#include "Mregex.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,12 +55,18 @@ typedef struct _subExpr_t {
     char * str;
 } subExpr_t;
 
+char * clearifiy ( char * str );
+char * strToLower ( char * c );
+
 range_t * getrange ( regex_t * );
 bool isInrange ( range_t *, int c );
+
 void freeRange ( range_t * );
 int seaktoPipe ( regex_t * );
+
 bool seakToEnd ( regex_t * );
 szRange getszRange ( regex_t * );
+
 #ifdef __cplusplus
 }
 #endif
