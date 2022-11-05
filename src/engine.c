@@ -22,10 +22,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 #include "engine.h"
-#include "regex.h"
+#include "Mregex.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #define isrange( i, b, c ) (i >= b && i <= c)   
 
@@ -51,6 +52,15 @@ char * clearifiy ( char * str ) {
     }
     str [i] = 0;
     return str;
+}
+
+char * strToLower ( char * c ) {
+
+    size_t len = strlen ( c );
+    for ( size_t i = 0; i < len; ++i ) {
+        c [i] = tolower ( c[i] );
+    }
+    return c;
 }
 
 // freerange necessary
@@ -99,6 +109,13 @@ range_t * getrange ( regex_t * regex ) {
             }
             else range->a[range->asz - 1].end = regex->begin [regex->pos + 2];
 
+            // final check
+            if ( range->a->end < range->a->start ) {
+
+                size_t c = range->a[range->asz - 1].start;
+                range->a[range->asz - 1].start = range->a[range->asz - 1].end;
+                range->a[range->asz - 1].end = c;
+            }
             regex->pos += 2;
         } else {
 
@@ -121,6 +138,8 @@ range_t * getrange ( regex_t * regex ) {
 }
 
 bool isInrange ( range_t * range, int c ) {
+
+    if ( c == 0 ) return false;
 
     for ( size_t i = 0; i < range->lsz; ++i ) {
         if ( c == range->List [i] ) return true;
@@ -219,7 +238,7 @@ szRange getszRange ( regex_t * regex ) {
     clearifiy ( buff );
 
     // get the necessary data
-    if ( !sscanf ( buff, "{%ld,%ld}", &r.min, &r.max ) ) {
+    if ( !sscanf ( buff, "{%zd,%zd}", &r.min, &r.max ) ) {
         // case failure
         r.state = ERROR;
         return r;
