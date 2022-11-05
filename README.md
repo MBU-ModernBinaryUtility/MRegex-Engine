@@ -34,8 +34,9 @@ Examples:
 	#include <Mregex.h>
 	int main (void) {
 		
+		char a [] = "[h-v]+", b [] = "H vkk lmn"; 
 		// will return SUCCES (0)
-		int c = Regex ( "[h-v]+", "HvKk lMn", NULL, 0, NoCase | NoWhite );
+		int c = Regex ( a, b, NULL, 0, NoCase | NoWhite );
 		
 	}
 	
