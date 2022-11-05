@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */  
 /* Fix the refrence back FUNCTIONALITY */
-#include "regex.h"
+#include "Mregex.h"
 #include "engine.h"
 #include <stdbool.h>
 #include <ctype.h>
@@ -39,7 +39,7 @@ regex_t * regexInit ( char * str ) {
     return t;
 }
 
-int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount ) {
+int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount, bool mul ) {
 
     char * expressions [10] = { NULL };
     if ( expre != NULL ) {
@@ -57,12 +57,21 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount ) {
     switch ( regex->begin [ regex->pos ] ) {
 
         case 0:
-            if ( str->begin [str->pos] == 0 ) return SUCCES;
+            if ( expre != NULL ) {
+
+                for ( size_t i = 0; i < count; ++i ) free ( expressions [i] );
+            }
+            if ( str->begin [str->pos] == 0 || mul ) return SUCCES;
+
             else return FAIL;
         case '}':
             regex->pos++;
             return SUCCES;
         case ')':
+            if ( expre != NULL ) {
+
+                for ( size_t i = 0; i < count; ++i ) free ( expressions [i] );
+            }
             regex->pos++;
             return SUCCES;
         case '(':
@@ -73,7 +82,7 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount ) {
             /* Helper variables */
             size_t rsave = regex->pos, save = str->pos, end;
 
-            int c = match ( regex, str , NULL, 0 );
+            int c = match ( regex, str , NULL, 0, mul );
             end = regex->pos - 1;
 
 
@@ -104,7 +113,7 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount ) {
     
                 regex->pos = rsave;
                 
-                for ( ; match ( regex, str, NULL, 0 ) == SUCCES; regex->pos = rsave ) continue;
+                for ( ; match ( regex, str, NULL, 0, false ) == SUCCES; regex->pos = rsave ) continue;
                 
                 regex->pos = end + 2;
                 break;
@@ -119,7 +128,7 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount ) {
 
                 size_t i = 1;
                 size_t v = 0, n = 0;
-                for ( n = str->pos;( v = match ( regex, str, NULL, 0 ) )== SUCCES && i < a.max; regex->pos = rsave, ++i, n = str->pos ) continue;
+                for ( n = str->pos;( v = match ( regex, str, NULL, 0, mul ) )== SUCCES && i < a.max; regex->pos = rsave, ++i, n = str->pos ) continue;
                 
                 if ( v != SUCCES ) str->pos = n;
                 regex->pos = end;
@@ -130,6 +139,7 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount ) {
 
             break;
         case '|':
+            //free expressions
             return 0;
         case '\\':
             /* NOT YET FINISHED */            
@@ -151,11 +161,25 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount ) {
 
                     regex->pos++;
                     regex_t * p = regexInit ( expressions [n] );
-                    if ( (n = match ( p, str, expressions, count )) == SUCCES ) {
+                    
+                    size_t len = p->end - p->begin;
+                    char * buff = malloc ( len + 1 );
+                    
+                    strncpy ( buff, &str->begin [str->pos], len );
+                    buff [len] = 0;
+
+                    regex_t * st = regexInit ( buff );
+
+                    if ( (n = match ( p, st, expressions, count, false )) == SUCCES ) {
+
+                        regexFree ( st );
                         regexFree ( p );
+                        str->pos += len + 1;
                         break;
                     }
                     else  {
+
+                        regexFree ( st );
                         regexFree ( p );
                         return n;
                     }
@@ -197,8 +221,6 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount ) {
                 srange = true;
             }
 
-
-
             if ( inR && !negate ) {
 
                 if ( srange ) {
@@ -207,16 +229,17 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount ) {
                     for ( ; isInrange ( range, str->begin [str->pos] ) && i < a.max; str->pos++, ++i ) continue;
                     if ( i < a.min ) return FAIL;
                 
-                } else if ( regex->begin [regex->pos + 1] == '?' )  regex->pos += 2;
+                } else if ( regex->begin [regex->pos + 1] == '?' )  regex->pos += 1;
                 else if ( regex->begin [regex->pos + 1 ] == '*' || regex->begin [regex->pos + 1] == '+' ) {
 
                     for ( ; isInrange ( range, str->begin [str->pos] ); str->pos++ ) continue;
-                    regex->pos += 2;
+                    regex->pos += 1;
 
                 } else {
                     str->pos++;
                 }
 
+                regex->pos++;
                 break;
             } else if ( negate && !inR ) {
                 
@@ -227,14 +250,14 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount ) {
                     if ( i < a.min ) return FAIL;
                 }
 
-                if ( regex->begin [regex->pos + 1] == '?' || regex->begin [regex->pos + 1] == '*' || regex->begin [regex->pos + 1] == '+' ) {
+                if ( regex->begin [regex->pos + 1] == '?' ) {
                     regex->pos++;
-                }
-                if ( regex->begin [regex->pos] == '*' || regex->begin [regex->pos] == '+' ) {
+                } else if ( regex->begin [regex->pos + 1] == '*' || regex->begin [regex->pos + 1] == '+' ) {
 
                     for ( ; !inR && str->begin [str->pos] != 0 ; str->pos++ ) inR = isInrange ( range, str->begin [str->pos] );
 
-                    str->pos--; // the above loop step an additional char in the string so we remove it
+                    regex->pos++;
+                    //str->pos--; // the above loop step an additional char in the string so we remove it
                 } else {
                     str->pos++;
                 }
@@ -255,17 +278,40 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount ) {
             if ( regex->begin [regex->pos] == '^' && &str->begin [str->pos] == str->begin ) {
                 regex->pos++;
                 break;
+            } else if ( regex->begin [regex->pos - 1] == '\n' ) {
+                regex->pos++;
+                break;
             }
             if ( seaktoPipe ( regex ) == FAIL ) return FAIL;
             regex->pos++;
             str->pos = 0;
             break;
         case '.':
+
             _c = str->begin [str->pos];
+
             if ( _c == 0 || _c == '\n') return FAIL;
             if ( !isascii ( _c ) ) return FAIL;
+
             regex->pos++;
             str->pos++;
+
+            if ( regex->begin [regex->pos] == '*' || regex->begin [regex->pos] == '+' ) {
+
+                regex->pos++;
+                if ( regex->begin [regex->pos] == 0 || regex->begin [regex->pos] == '\n' ) return SUCCES;
+                
+                if ( regex->begin [regex->pos] == '\\' ) regex->pos++;
+                char stopChar = regex->begin [regex->pos];
+                
+                while ( str->begin [str->pos] != 0 || regex->begin [regex->pos] != '\n' ) {
+                    
+                    if ( str->begin [str->pos] == stopChar ) break;
+                    str->pos++;
+                }
+
+                if ( regex->begin [regex->pos - 1] == '\\' ) regex->pos--;
+            }
             break;
         case '*':
             
@@ -282,8 +328,8 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount ) {
             regex->pos++;
             break;
         case '$':
-            if ( regex->begin [regex->pos + 1] != '|' && regex->begin [regex->pos + 1] != 0 ) return ERROR;
-            if ( str->begin [str->pos] == 0 ) return SUCCES;
+            if ( str->begin [str->pos] == 0 || str->begin [str->pos] == '\n' ) return SUCCES;
+
             if ( seaktoPipe ( regex ) == FAIL ) return FAIL;
             regex->pos++;
             str->pos = 0;
@@ -324,8 +370,32 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount ) {
             break;
 
     }
-    return match ( regex, str, expressions, count );
+    return match ( regex, str, expressions, count, mul );
 }
+
+int Regex ( char * regex, char * str, char ** expre, size_t sz, unsigned char mode ) {
+
+    if ( mode & NoWhite ) {
+        clearifiy ( str );
+        clearifiy ( regex );
+    }
+
+    if ( mode & NoCase ) {
+        strToLower ( str );
+        strToLower ( regex );
+    }
+
+    regex_t * a = regexInit ( regex );
+    regex_t * b = regexInit ( str );
+
+    int c = match ( a, b, expre, sz, mode & MultiLine );
+
+    regexFree ( a );
+    regexFree ( b );
+
+    return c;
+}
+
 
 void regexFree ( regex_t * regex ) {
 
