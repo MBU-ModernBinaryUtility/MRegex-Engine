@@ -43,28 +43,31 @@ typedef struct _szRange
     size_t min, max;
 } szRange;
 
+// range
 typedef struct _range_t {
     char * List;
     __range_t * a;
     size_t asz, lsz;
 } range_t;
 
-typedef struct _subExpr_t {
-
-    size_t begin, end;
-    char * str;
-} subExpr_t;
-
+// remove all the white spaces from str
 char * clearifiy ( char * str );
-char * strToLower ( char * c );
+char * strToLower ( char * str );
 
+// get the range like: '[a-z]' 
 range_t * getrange ( regex_t * );
+// test if it's in range
 bool isInrange ( range_t *, int c );
-
+// destroy the range
 void freeRange ( range_t * );
+// find the pipe ('|') and set the regex->pos to it's position
+// return SUCCES or FAIL
 int seaktoPipe ( regex_t * );
 
+// seak to the end of expression
 bool seakToEnd ( regex_t * );
+
+// get size range
 szRange getszRange ( regex_t * );
 
 #ifdef __cplusplus
