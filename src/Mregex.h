@@ -40,16 +40,32 @@ extern "C" {
 
 typedef struct _regex_t {
 
-    char * begin;
-    char * end;
-    size_t pos;
+    char * begin; // the beginning of the string
+    char * end; // the end of the string
+    size_t pos; // current position
 } regex_t;
 
+// initialize our regular expression
 regex_t * regexInit ( char * str );
 
+/// @brief match the regex with str recursively
+/// @param regex the regular expression string
+/// @param str the string to be matched
+/// @param expre the strings matched by the sub-expressions
+/// @param kcount the count of expre
+/// @param mul if multi-line mode enabled
+/// @return SUCCES, Faile, or ERROR
 int match ( regex_t * regex, regex_t * str, char **, size_t, bool  );
-int Regex ( char * regex, char * str, char **, size_t, unsigned char mode );
 
+/// @brief the main function
+/// @param regex the regular expression string
+/// @param str the string to match
+/// @param final the final string ( the feature is under-development )
+/// @param mode the modes 
+/// @return SUCCES, FAILED, or ERROR
+int Regex ( char * regex, char * str, char **, unsigned char mode );
+
+// destroy the regex
 void regexFree ( regex_t * );
 
 #ifdef __cplusplus
