@@ -37,7 +37,7 @@ int main (void) {
 		
 char a [] = "[h-v]+", b [] = "H vkk lmn"; 
 // will return SUCCES (0)
-int c = Regex ( a, b, NULL, 0, NoCase | NoWhite );
+int c = Regex ( a, b, NULL, NoCase | NoWhite );
 		
 }
 ```
