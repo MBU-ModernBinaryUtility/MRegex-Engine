@@ -37,7 +37,7 @@ bool misblank ( int c ) {
     return false;
 }
 
-// clear the string from the unnecessary white spaces
+// remove all the white spaces from the string
 char * clearifiy ( char * str ) {
 
     size_t i = 0, d = 0;
@@ -64,13 +64,9 @@ char * strToLower ( char * c ) {
 }
 
 // freerange necessary
-/* I don't know what hapening here but every time i get segfault on every platform */
 void freeRange ( range_t * r ) {
-/* on my machine there is a bug I get segfault everytime I free this pointer so I'll wait
-until the operating system collects the resources*/
-//#if defined (_WIN32) || defined (_WIN64)
-    if ( r->a ) free ( r->a ); // fix this
 
+    if ( r->a ) free ( r->a );
     if ( r->List ) free ( r->List );
     free ( r );
 
@@ -79,27 +75,26 @@ until the operating system collects the resources*/
 
 range_t * getrange ( regex_t * regex ) {
 
-    range_t * range = malloc ( sizeof ( range ) );
+    // initialize the range
+    range_t * range = malloc ( sizeof ( range_t ) );
     range->a = malloc ( sizeof ( __range_t ) );
-    range->a [0].start = 0;
-    range->a [0].end = 0;
+    range->List = malloc ( sizeof ( char ) );
     range->asz = 0;
     range->lsz = 0;
 
+
     regex->pos++;
 
-    while ( regex->begin [regex->pos] != ']' ) {
+    while ( regex->begin [regex->pos] != 0 ) {
 
+        if ( regex->begin [regex->pos] == ']' && regex->begin [regex->pos - 1] != '\\' ) break; // found the end
+
+        if ( regex->begin [regex->pos] == '\\' ) regex->pos++;        
+        // '-' considered as a character if it's at the begining or at the end
         if ( regex->begin [regex->pos + 1] == '-' && regex->begin [regex->pos + 2] != ']' ) {
 
             range->asz++;
-            if ( range->asz == 1 ) {
-                range->a = malloc ( sizeof ( sizeof ( __range_t ) ) );
-
-            } else {
-                range->a = realloc ( range->a, sizeof ( __range_t ) * range->asz );
-
-            }
+            range->a = realloc ( range->a, sizeof ( __range_t ) * range->asz );
 
             range->a[range->asz - 1].start = regex->begin [regex->pos];
 
@@ -120,14 +115,9 @@ range_t * getrange ( regex_t * regex ) {
         } else {
 
             range->lsz++;
-            if ( range->lsz == 1 ) {
-                range->List = malloc ( sizeof ( char ) );
+            range->List = realloc ( range->List, sizeof ( char ) * range->lsz );
 
-            } else {
-                range->List = realloc ( range->List, sizeof ( char ) * range->lsz );
-
-            }
-            if ( regex->begin [regex->pos] == '\\' ) range->List [range->lsz - 1] = regex->begin [regex->pos + 1]; 
+            if ( regex->begin [regex->pos] == '\\' ) range->List [range->lsz - 1] = regex->begin [regex->pos + 1];
             else range->List [range->lsz - 1] = regex->begin [regex->pos];
         }
 
@@ -138,8 +128,6 @@ range_t * getrange ( regex_t * regex ) {
 }
 
 bool isInrange ( range_t * range, int c ) {
-
-    if ( c == 0 ) return false;
 
     for ( size_t i = 0; i < range->lsz; ++i ) {
         if ( c == range->List [i] ) return true;
@@ -157,10 +145,11 @@ int seaktoPipe ( regex_t * regex ) {
     size_t save = regex->pos;
     while ( regex->begin [regex->pos] != 0 ) {
 
+        // skip the sub-expression
         if ( regex->begin [regex->pos] == '(' && regex->begin [regex->pos - 1] != '\\' ) {
-            /*deal with it*/
             seakToEnd ( regex );
         }
+        // test if escaped like this  '\|': it match the '|' character
         if ( regex->begin [regex->pos - 1] != '\\' ) {
 
             switch ( regex->begin [regex->pos] ) {
@@ -181,7 +170,7 @@ int seaktoPipe ( regex_t * regex ) {
         } else regex->pos++;
     }
 
-    regex->pos = save;
+    regex->pos = save; // restore the position if failed
     return FAIL;
 }
 
@@ -191,14 +180,17 @@ bool seakToEnd ( regex_t * regex ) {
 
         if ( regex->begin [regex->pos] == ')' ) {
             regex->pos++;
-            return true;
+            return true; // the job has done
         }
-        if ( regex->begin [regex->pos] == '(' && regex->begin [regex->pos-1] != '\\' ) {
+        if ( regex->begin [regex->pos] == '(' ) {
+            // skip the nested sub-expression
             regex->pos++;
             seakToEnd ( regex );
         }
+        // skip the escaped character
         if ( regex->begin [regex->pos] == '\\' ) regex->pos++;
         regex->pos++;
+
     } while ( regex->begin [regex->pos] != 0 );
     return false;
 }
@@ -208,9 +200,11 @@ bool seakToEnd ( regex_t * regex ) {
 bool findEnd ( regex_t * regex ) {
 
     do {
+
         regex->pos++;
-        if ( regex->begin [regex->pos] == '}' && regex->begin [regex->pos - 1] != '\\' ) return true;
-        if ( regex->begin [regex->pos] == '{' && regex->begin [regex->pos - 1] != '\\' ) {
+        if ( regex->begin [regex->pos] == '\\' ) regex->pos += 2;
+        if ( regex->begin [regex->pos] == '}' ) return true;
+        if ( regex->begin [regex->pos] == '{' ) {
             if ( !findEnd ( regex ) ) return false;
         }
 
