@@ -42,4 +42,17 @@ int c = Regex ( a, b, NULL, NoCase | NoWhite );
 }
 ```
 
-Currently, there are more things under-development
+Currently, there are more things under-development.
+
+###The Regex function
+
+ The Regex function has 4 parameters 
+ the first parameter is the regex string
+ the second parameter is the text string (the string to be matched)
+ the third parameter is not yet implemented
+ the fourth parameter is the modes where it can be ( 0 or NoCase | NoWhite)
+
+`Regex ( regex, str, NULL, MultiLine | NoWhite )`
+
+So, what are you waiting for, go ahead and try it out.
+Found a bug Let us know at modernbinaryutility@gmail.com
