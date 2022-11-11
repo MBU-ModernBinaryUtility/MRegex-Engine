@@ -415,8 +415,8 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount, bool 
 int Regex ( char * regex, char * str, char ** expre, unsigned char mode ) {
 
     if ( mode & NoWhite ) {
-        clearifiy ( str );
-        clearifiy ( regex );
+        clearifiy ( str, mode & MultiLine );
+        clearifiy ( regex, mode & MultiLine );
     }
 
     if ( mode & NoCase ) {
