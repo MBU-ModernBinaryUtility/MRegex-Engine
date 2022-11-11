@@ -31,19 +31,19 @@ SOFTWARE.
 #define isrange( i, b, c ) (i >= b && i <= c)   
 
 // Used because the original one had problemes
-bool misblank ( int c ) {
+bool misblank ( int c, bool l ) {
 
-    if ( c == ' ' || c == '\r' || c == '\n' || c == '\t' ) return true;
+    if ( c == ' ' || ( (c == '\r' || c == '\n') && !l ) || c == '\t' ) return true;
     return false;
 }
 
 // remove all the white spaces from the string
-char * clearifiy ( char * str ) {
+char * clearifiy ( char * str, bool mul ) {
 
     size_t i = 0, d = 0;
     while ( str [d] != 0 ) {
 
-        while ( misblank ( str [d] ) ) {
+        while ( misblank ( str [d], mul ) ) {
             d++;
         }
         str [i] = str [d];
