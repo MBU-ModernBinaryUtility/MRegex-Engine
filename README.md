@@ -44,7 +44,7 @@ int c = Regex ( a, b, NULL, NoCase | NoWhite );
 
 Currently, there are more things under-development.
 
-###The Regex function
+### The Regex function
 
  The Regex function has 4 parameters 
  the first parameter is the regex string
