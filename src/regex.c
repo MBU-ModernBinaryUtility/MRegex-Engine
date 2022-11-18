@@ -99,6 +99,11 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount, bool 
             // start matching the sub-expression
             int c = match ( regex, str , NULL, 0, false );
             end = regex->pos - 1;
+            if ( c == FAIL ) return FAIL;
+
+            if ( regex->begin [regex->pos] == '|' ) {
+                seakToEnd ( regex );
+            }
 
             if ( regex->begin [regex->pos - 1] != ')' ) return ERROR; // special case
 
