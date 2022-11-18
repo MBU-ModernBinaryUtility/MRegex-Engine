@@ -229,7 +229,7 @@ szRange getszRange ( regex_t * regex ) {
     strncpy ( buff, &regex->begin [be], (sz - 1) );
     buff [sz - 1] = 0;
 
-    clearifiy ( buff );
+    clearifiy ( buff, false );
 
     // get the necessary data
     if ( !sscanf ( buff, "{%zd,%zd}", &r.min, &r.max ) ) {
