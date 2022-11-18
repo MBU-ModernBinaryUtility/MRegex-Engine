@@ -51,7 +51,7 @@ typedef struct _range_t {
 } range_t;
 
 // remove all the white spaces from str
-char * clearifiy ( char * str );
+char * clearifiy ( char * str, bool );
 char * strToLower ( char * str );
 
 // get the range like: '[a-z]' 
