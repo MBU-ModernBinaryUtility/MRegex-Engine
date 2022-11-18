@@ -329,18 +329,28 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount, bool 
             if ( regex->begin [regex->pos] == '*' || regex->begin [regex->pos] == '+' ) {
 
                 regex->pos++;
-                if ( regex->begin [regex->pos] == 0 || regex->begin [regex->pos] == '\n' ) return SUCCES;
+                if ( regex->begin [regex->pos] == 0 ) return SUCCES;
                 
                 if ( regex->begin [regex->pos] == '\\' ) regex->pos++;
                 char stopChar = regex->begin [regex->pos];
                 
-                while ( str->begin [str->pos] != 0 || regex->begin [regex->pos] != '\n' ) {
+                while ( str->begin [str->pos] != 0 && regex->begin [regex->pos] != '\n' ) {
                     
-                    if ( str->begin [str->pos] == stopChar ) break;
+                    if ( str->begin [str->pos] == stopChar ) {
+
+                        size_t ssave = str->pos;
+                        size_t rsave = regex->pos;
+                        int rc = match ( regex, str, expressions, count, mul);
+
+                        if ( rc == ERROR ) return ERROR;
+                        if ( rc == SUCCES ) return SUCCES;
+
+                        str->pos = ssave;
+                        regex->pos = rsave;
+                    }
                     str->pos++;
                 }
 
-                if ( regex->begin [regex->pos - 1] == '\\' ) regex->pos--;
             }
             break;
         case '*':
