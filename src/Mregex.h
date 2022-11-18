@@ -54,8 +54,9 @@ regex_t * regexInit ( char * str );
 /// @param expre the strings matched by the sub-expressions
 /// @param kcount the count of expre
 /// @param mul if multi-line mode enabled
+/// @param sv A helper variable always set to 0
 /// @return SUCCES, Faile, or ERROR
-int match ( regex_t * regex, regex_t * str, char **, size_t, bool  );
+int match ( regex_t * regex, regex_t * str, char **, size_t, bool, size_t );
 
 /// @brief the main function
 /// @param regex the regular expression string
