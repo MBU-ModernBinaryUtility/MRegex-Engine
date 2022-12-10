@@ -32,16 +32,16 @@ SOFTWARE.
 extern "C" {
 #endif
 
-typedef struct __range_t
-{
-    char start, end;
-} __range_t;
-
 typedef struct _szRange
 {
     int state; // FAIL or SUCCES or ERROR
     size_t min, max;
 } szRange;
+
+typedef struct __range_t
+{
+    char start, end;
+} __range_t;
 
 // range
 typedef struct _range_t {
@@ -69,6 +69,12 @@ bool seakToEnd ( regex_t * );
 
 // get size range
 szRange getszRange ( regex_t * );
+
+// find the end of curly brace that's not escaped
+bool findEnd ( regex_t * );
+
+// find ',' in the given regex
+bool findComma ( regex_t * regex );
 
 #ifdef __cplusplus
 }
