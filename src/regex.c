@@ -90,8 +90,14 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount, bool 
             regex->pos++;
 
             saves = str->pos;
-            if ( ( _c = match ( regex, str, expressions, count, mul, sv ) ) != SUCCES ) return _c;
-            
+            if ( ( _c = match ( regex, str, expressions, count, mul, sv ) ) != SUCCES ) {
+
+                if ( !findEnd ( regex ) ) return ERROR;
+                if ( seaktoPipe ( regex ) == FAIL) return FAIL;
+                regex->pos++;
+                str->pos = sv;
+            }
+
             if ( !(regex->begin [regex->pos - 1] == ',' || regex->begin [regex->pos - 1] == '|') ) return ERROR;
             
             if ( regex->begin [regex->pos - 1] == '|' ) {
@@ -508,9 +514,7 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount, bool 
 
 /// @brief the main function
 /// @param regex the regular expression string
-/// @param sz1 the size of string 1
 /// @param str the string to match
-/// @param sz2 the size of string 2
 /// @param fstr the final string ( the feature is under-development )
 /// @param mode the modes 
 /// @return SUCCES, FAILED, or ERROR
