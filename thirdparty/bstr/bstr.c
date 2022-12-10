@@ -598,7 +598,7 @@ bstr * bstrRemoveIndex ( bstr * str, bstr * toRemove, size_t index ) {
 bstr * bstrReplacep ( bstr * str, size_t begin, size_t end, bstr * what ) {
 
     if ( str == NULL || what == NULL ) return NULL;
-    if ( end > begin ) return NULL;
+    if ( end < begin ) return NULL;
 
     if ( begin > str->len || end > str->len || what->len > str->len ) return NULL;
 
@@ -616,7 +616,12 @@ bstr * bstrReplacep ( bstr * str, size_t begin, size_t end, bstr * what ) {
         }
     } else if ( begin == 0 && end == str->len ) {
 
-        return bstrCopy ( what );
+        s = bstrCopy ( what );
+        free ( str->data );
+        str->data = s->data;
+        str->len = s->len;
+        free ( s );
+        return str;
     } else if ( begin == 0 ) {
 
         s = bstrCopy ( what );
