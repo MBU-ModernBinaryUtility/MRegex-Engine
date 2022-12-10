@@ -45,6 +45,12 @@ typedef struct _regex_t {
     size_t pos; // current position
 } regex_t;
 
+typedef struct _regex_l {
+
+    regex_t ** regex;
+    size_t len;
+} regex_l; // regex list
+
 // initialize our regular expression
 regex_t * regexInit ( char * str );
 
@@ -60,8 +66,10 @@ int match ( regex_t * regex, regex_t * str, char **, size_t, bool, size_t );
 
 /// @brief the main function
 /// @param regex the regular expression string
+/// @param sz1 the size of string 1
 /// @param str the string to match
-/// @param final the final string ( the feature is under-development )
+/// @param sz2 the size of string 2
+/// @param fstr the final string ( the feature is under-development )
 /// @param mode the modes 
 /// @return SUCCES, FAILED, or ERROR
 int Regex ( char * regex, char * str, char **, unsigned char mode );
