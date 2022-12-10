@@ -27,14 +27,20 @@ SOFTWARE.
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
+#include <bstr.h>
 
 // initialize our regular expression
 regex_t * regexInit ( char * str ) {
 
     regex_t * t = malloc ( sizeof ( regex_t ) );
-    t ->begin = str;
+
+    size_t len = strlen ( str ) + 1;
+    t ->begin = malloc ( len * sizeof ( char ));
+    strncpy ( t->begin, str, len);
+
+    t->end = str + len;
+
     t->pos = 0;
-    t->end = str + strlen ( str );
     return t;
 }
 
@@ -44,6 +50,7 @@ regex_t * regexInit ( char * str ) {
 /// @param expre the strings matched by the sub-expressions
 /// @param kcount the count of expre
 /// @param mul if multi-line mode enabled
+/// @param sv to hold the last str pos after the beginning of sub-expression
 /// @return SUCCES, Faile, or ERROR
 int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount, bool mul, size_t sv ) {
 
@@ -56,8 +63,10 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount, bool 
 
     // set up the neded variable
     szRange a;
+    bool h = false;
     size_t count = kcount;
     bool negate = false;
+    size_t saves;
     int _c = 0;
     size_t min = 1; // if the minimum is zero in '{min,max}'
     bool srange = false;
@@ -73,7 +82,61 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount, bool 
             // if multi line enabled isn't necessary for str to end
             if ( str->begin [str->pos] == 0 || mul ) return SUCCES;
             else return FAIL;
-        // not yet used
+        // reaplce
+        case '@':
+
+            regex->pos++;
+            if ( regex->begin [regex->pos] != '{' ) return ERROR;
+            regex->pos++;
+
+            saves = str->pos;
+            if ( ( _c = match ( regex, str, expressions, count, mul, sv ) ) != SUCCES ) return _c;
+            
+            if ( !(regex->begin [regex->pos - 1] == ',' || regex->begin [regex->pos - 1] == '|') ) return ERROR;
+            
+            if ( regex->begin [regex->pos - 1] == '|' ) {
+
+                if ( !findComma ( regex )) return ERROR;
+                regex->pos++;
+            }
+
+            size_t ends = str->pos;
+
+            size_t before = regex->pos;
+
+            if ( !findEnd ( regex ) ) return ERROR;
+
+            size_t after = regex->pos;
+            
+            size_t len = after - before;
+            char * saveString = malloc ( sizeof ( char ) * (len + 1) );
+
+            strncpy ( saveString, &regex->begin [before], len );
+            saveString [len] = 0;
+            bstr * s = bstrCreate ( saveString );
+            
+            bstr * s2 = bstrCreate ( str->begin );
+            bstrReplacep ( s2, saves, ends, s );
+
+            bstrDestroy (s);
+
+            str->begin = realloc ( str->begin, s2->len + 1 );
+            strncpy ( str->begin, s2->data, s2->len );
+            
+            str->begin [s2->len] = 0;
+            str->end = str->begin + s2->len;
+
+            bstrDestroy ( s2 );
+
+            str->pos = saves + len;
+
+            regex->pos ++;
+            break;
+        break;
+        // end matching and start replacing
+        case ',':
+            regex->pos++;
+            return SUCCES;
         case '}':
             regex->pos++;
             return SUCCES;
@@ -100,11 +163,19 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount, bool 
             int c = match ( regex, str , NULL, 0, false, save );
             end = regex->pos - 1;
 
+            // special case example "(15|16)" and str = "15"
+            // the current regex char will be '|'
             if ( regex->begin [regex->pos] == '|' ) {
                 seakToEnd ( regex );
             }
 
-            if ( regex->begin [regex->pos - 1] != ')' ) return ERROR; // special case
+            // special case example "(hello"
+            if ( regex->begin [regex->pos - 1] != ')' ) {
+
+                if ( seakToEnd ( regex ) == false ) return ERROR;
+
+                break;
+            }
 
             if ( c == ERROR ) return ERROR;
             if ( c == FAIL ) {
@@ -252,7 +323,7 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount, bool 
                 srange = true;
             }
 
-            // if it's in range and no negate
+            // if it's in range and not negate
             if ( inR && !negate ) {
 
                 if ( srange ) {
@@ -437,11 +508,13 @@ int match ( regex_t * regex, regex_t * str, char ** expre , size_t kcount, bool 
 
 /// @brief the main function
 /// @param regex the regular expression string
+/// @param sz1 the size of string 1
 /// @param str the string to match
-/// @param expre the final string ( the feature is under-development )
+/// @param sz2 the size of string 2
+/// @param fstr the final string ( the feature is under-development )
 /// @param mode the modes 
 /// @return SUCCES, FAILED, or ERROR
-int Regex ( char * regex, char * str, char ** expre, unsigned char mode ) {
+int Regex ( char * regex, char * str, char ** fstr, unsigned char mode ) {
 
     if ( mode & NoWhite ) {
         clearifiy ( str, mode & MultiLine );
@@ -458,6 +531,14 @@ int Regex ( char * regex, char * str, char ** expre, unsigned char mode ) {
 
     int c = match ( a, b, NULL, 0, mode & MultiLine, 0 );
 
+    size_t len = strlen (b->begin) + 1;
+
+    if ( fstr != NULL ) {
+
+        *fstr = malloc ( len * sizeof ( char ) );
+        strncpy ( *fstr, b->begin, len );
+    }
+
     regexFree ( a );
     regexFree ( b );
 
@@ -467,7 +548,7 @@ int Regex ( char * regex, char * str, char ** expre, unsigned char mode ) {
 // destroy the regex
 void regexFree ( regex_t * regex ) {
 
-    regex->begin = NULL;
+    free ( regex->begin);
     regex->end = NULL;
     free ( regex );
     return;
