@@ -249,3 +249,15 @@ szRange getszRange ( regex_t * regex ) {
     }
     return r;
 }
+
+bool findComma ( regex_t * regex ) {
+
+    while ( regex->begin [regex->pos] != 0 ) {
+
+        if ( regex->begin [regex->pos] == ',' && regex->begin [regex->pos - 1] != '\\' ) return true;
+
+        regex->pos++;
+    }
+
+    return false;
+}
